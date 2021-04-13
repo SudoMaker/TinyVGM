@@ -97,6 +97,15 @@ typedef struct tinyvgm_context {
 } TinyVGMContext;
 
 /**
+ * Calculate the length of a 16-bit, 0x0000-terminated string.
+ *
+ * @param strarg		The 16-bit string.
+ *
+ * @return			Length of the string.
+ */
+extern size_t tinyvgm_strlen16(const int16_t* strarg);
+
+/**
  * Initialize a TinyVGM context.
  *
  * @param ctx			TinyVGM context pointer.

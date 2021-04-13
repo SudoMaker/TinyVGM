@@ -102,7 +102,7 @@ static void tinyvgm_buffer_clear(TinyVGMContext *ctx) {
 	ctx->current_command = 0;
 }
 
-size_t strlen16(const int16_t* strarg) {
+size_t tinyvgm_strlen16(const int16_t* strarg) {
 	if (!strarg)
 		return -1; //strarg is NULL pointer
 	const int16_t* str = strarg;
@@ -273,16 +273,16 @@ int32_t tinyvgm_parse_gd3(TinyVGMGd3Info *ctx, const void *buf, uint16_t len) {
 
 			if (ctx->__read_bytes - 12 == ctx->__total_length) {
 				ctx->title = ctx->buf;
-				ctx->title_jp = ctx->title + strlen16(ctx->title) + 1;
-				ctx->album = ctx->title_jp + strlen16(ctx->title_jp) + 1;
-				ctx->album_jp = ctx->album + strlen16(ctx->album) + 1;
-				ctx->system_name = ctx->album_jp + strlen16(ctx->album_jp) + 1;
-				ctx->system_name_jp = ctx->system_name + strlen16(ctx->system_name) + 1;
-				ctx->composer = ctx->system_name_jp + strlen16(ctx->system_name_jp) + 1;
-				ctx->composer_jp = ctx->composer + strlen16(ctx->composer) + 1;
-				ctx->release_date = ctx->composer_jp + strlen16(ctx->composer_jp) + 1;
-				ctx->converter = ctx->release_date + strlen16(ctx->release_date) + 1;
-				ctx->note = ctx->converter + strlen16(ctx->converter) + 1;
+				ctx->title_jp = ctx->title + tinyvgm_strlen16(ctx->title) + 1;
+				ctx->album = ctx->title_jp + tinyvgm_strlen16(ctx->title_jp) + 1;
+				ctx->album_jp = ctx->album + tinyvgm_strlen16(ctx->album) + 1;
+				ctx->system_name = ctx->album_jp + tinyvgm_strlen16(ctx->album_jp) + 1;
+				ctx->system_name_jp = ctx->system_name + tinyvgm_strlen16(ctx->system_name) + 1;
+				ctx->composer = ctx->system_name_jp + tinyvgm_strlen16(ctx->system_name_jp) + 1;
+				ctx->composer_jp = ctx->composer + tinyvgm_strlen16(ctx->composer) + 1;
+				ctx->release_date = ctx->composer_jp + tinyvgm_strlen16(ctx->composer_jp) + 1;
+				ctx->converter = ctx->release_date + tinyvgm_strlen16(ctx->release_date) + 1;
+				ctx->note = ctx->converter + tinyvgm_strlen16(ctx->converter) + 1;
 			}
 		} else {
 			return read_len;
