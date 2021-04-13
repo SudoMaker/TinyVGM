@@ -1,4 +1,4 @@
-# TinyVGM
+# TinyVGM [![Actions Status](https://github.com/SudoMaker/TinyVGM/workflows/Build/badge.svg)](https://github.com/SudoMaker/TinyVGM/actions/workflows/build_cmake.yml)
 
 A lightweight library for parsing the VGM format.
 
