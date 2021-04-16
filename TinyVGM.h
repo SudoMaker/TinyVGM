@@ -136,7 +136,9 @@ extern void tinyvgm_destroy(TinyVGMContext *ctx);
  * @param buf			Buffer of the VGM stream.
  * @param len			Length of buffer.
  *
- * @return			Length of successfully processed bytes. If the VGM stream is invalid, -1 will be returned.
+ * @return			Length of successfully processed bytes. If a callback fails, negated bytes drained from buffer will be returned. If the VGM stream is invalid, INT32_MIN will be returned.
+ *
+ * When a callback fails, you can get the command in TinyVGMContext::current_command and its params in TinyVGMContext::buffer, if needed.
  *
  */
 extern int32_t tinyvgm_parse(TinyVGMContext *ctx, const void *buf, uint16_t len);

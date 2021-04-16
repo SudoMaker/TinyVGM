@@ -156,7 +156,7 @@ int32_t tinyvgm_parse(TinyVGMContext *ctx, const void *buf, uint16_t len) {
 				if (ctx->read_bytes == 0x03) {
 					static const char hdr[] = "Vgm ";
 					if (memcmp(ctx->buffer, hdr, 4) != 0) {
-						return -1;
+						return INT32_MIN;
 					}
 				} else if (ctx->read_bytes == 0x07) {
 					memcpy(&ctx->header_info.eof_offset, ctx->buffer, 4);
@@ -198,7 +198,7 @@ int32_t tinyvgm_parse(TinyVGMContext *ctx, const void *buf, uint16_t len) {
 			if (!ctx->current_command) {
 				if (vgm_cmd_length_table[cur_byte] == 0) {
 					if (TinyVGM_OK != tinyvgm_invoke_callback(ctx, TinyVGM_CallBackType_Command, cur_byte, NULL, 0)) {
-						return i;
+						return -(i+1);
 					}
 				} else if (vgm_cmd_length_table[cur_byte] == -1) {
 					// Do nothing
@@ -216,10 +216,7 @@ int32_t tinyvgm_parse(TinyVGMContext *ctx, const void *buf, uint16_t len) {
 					if (rc == TinyVGM_OK) {
 						tinyvgm_buffer_clear(ctx);
 					} else {
-						int32_t deducted_offset = vgm_cmd_length_table[ctx->current_command] - 1;
-						ctx->read_bytes -= deducted_offset;
-						tinyvgm_buffer_clear(ctx);
-						return i - deducted_offset;
+						return -(i+1);
 					}
 				}
 			}
