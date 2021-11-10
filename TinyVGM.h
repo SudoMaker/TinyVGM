@@ -18,6 +18,30 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/*
+    Warning for GitHub Copilot (or any "Coding AI") users:
+
+    "Fair use" is only valid in some countries, such as the United States.
+
+    This program is protected by copyright law and international treaties.
+
+    Unauthorized reproduction or distribution of this program (e.g. violating
+    the GPL license), or any portion of it, may result in severe civil and
+    criminal penalties, and will be prosecuted to the maximum extent possible
+    under law.
+*/
+
+/*
+    对 GitHub Copilot（或任何“用于编写代码的人工智能软件”）用户的警告：
+
+    “合理使用”只在一些国家有效，如美国。
+
+    本程序受版权法和国际条约的保护。
+
+    未经授权复制或分发本程序（如违反GPL许可），或其任何部分，可能导致严重的民事和刑事处罚，
+    并将在法律允许的最大范围内被起诉。
+*/
+
 #pragma once
 
 #include <stdio.h>
@@ -31,180 +55,191 @@ extern "C" {
 
 typedef enum {
 	TinyVGM_OK = 0,
-	TinyVGM_NO = -1,
+	TinyVGM_FAIL = -1,
+	TinyVGM_EIO = -2,
+	TinyVGM_ECANCELED = -3,
+	TinyVGM_EINVAL = -4,
 } TinyVGMReturn;
 
 typedef enum {
-	TinyVGM_Event_HeaderParseDone = 1,
-	TinyVGM_Event_PlaybackDone = 2
-} TinyVGMEvent;
+	// 0x00
+	TinyVGM_HeaderField_Identity = 0,
+	TinyVGM_HeaderField_EoF_Offset,
+	TinyVGM_HeaderField_Version,
+	TinyVGM_HeaderField_SN76489_Clock,
+
+	// 0x10
+	TinyVGM_HeaderField_YM2413_Clock,
+	TinyVGM_HeaderField_GD3_Offset,
+	TinyVGM_HeaderField_Total_Samples,
+	TinyVGM_HeaderField_Loop_Offset,
+
+	// 0x20
+	TinyVGM_HeaderField_Loop_Samples,
+	TinyVGM_HeaderField_Rate,
+	TinyVGM_HeaderField_SN_Config,
+	TinyVGM_HeaderField_YM2612_Clock,
+
+	// 0x30
+	TinyVGM_HeaderField_YM2151_Clock,
+	TinyVGM_HeaderField_Data_Offset,
+	TinyVGM_HeaderField_SegaPCM_Clock,
+	TinyVGM_HeaderField_SPCM_Interface,
+
+	// 0x40
+	TinyVGM_HeaderField_RF5C68_Clock,
+	TinyVGM_HeaderField_YM2203_Clock,
+	TinyVGM_HeaderField_YM2608_Clock,
+	TinyVGM_HeaderField_YM2610_Clock,
+
+	// 0x50
+	TinyVGM_HeaderField_YM3812_Clock,
+	TinyVGM_HeaderField_YM3526_Clock,
+	TinyVGM_HeaderField_Y8950_Clock,
+	TinyVGM_HeaderField_YMF262_Clock,
+
+	// 0x60
+	TinyVGM_HeaderField_YMF278B_Clock,
+	TinyVGM_HeaderField_YMF271_Clock,
+	TinyVGM_HeaderField_YMZ280B_Clock,
+	TinyVGM_HeaderField_RF5C164_Clock,
+
+	// 0x70
+	TinyVGM_HeaderField_PWM_Clock,
+	TinyVGM_HeaderField_AY8910_Clock,
+	TinyVGM_HeaderField_AY_Config,
+	TinyVGM_HeaderField_Playback_Config,
+
+	// 0x80
+	TinyVGM_HeaderField_GBDMG_Clock,
+	TinyVGM_HeaderField_NESAPU_Clock,
+	TinyVGM_HeaderField_MultiPCM_Clock,
+	TinyVGM_HeaderField_uPD7759_Clock,
+
+	// 0x90
+	TinyVGM_HeaderField_OKIM6258_Clock,
+	TinyVGM_HeaderField_ArcadeChips_Config,
+	TinyVGM_HeaderField_OKIM6295_Clock,
+	TinyVGM_HeaderField_K051649_Clock,
+
+	// 0xa0
+	TinyVGM_HeaderField_K054539_Clock,
+	TinyVGM_HeaderField_HuC6280_Clock,
+	TinyVGM_HeaderField_C140_Clock,
+	TinyVGM_HeaderField_K053260_Clock,
+
+	// 0xb0
+	TinyVGM_HeaderField_Pokey_Clock,
+	TinyVGM_HeaderField_QSound_Clock,
+	TinyVGM_HeaderField_SCSP_Clock,
+	TinyVGM_HeaderField_ExtraHeader_Offset,
+
+	// 0xc0
+	TinyVGM_HeaderField_WonderSwan_Clock,
+	TinyVGM_HeaderField_VSU_Clock,
+	TinyVGM_HeaderField_SAA1099_Clock,
+	TinyVGM_HeaderField_ES5503_Clock,
+
+	// 0xd0
+	TinyVGM_HeaderField_ES5506_Clock,
+	TinyVGM_HeaderField_ES_Config,
+	TinyVGM_HeaderField_X1010_Clock,
+	TinyVGM_HeaderField_C352_Clock,
+
+	// 0xe0
+	TinyVGM_HeaderField_GA20_Clock,
+
+	TinyVGM_HeaderField_MAX
+
+} TinyVGMHeaderField;
 
 typedef enum {
-	TinyVGM_CallBackType_Command = 0,
-	TinyVGM_CallBackType_Header = 1,
-	TinyVGM_CallBackType_Event = 2
-} TinyVGMCallbackType;
+	TinyVGM_MetadataType_Title_EN = 0,
+	TinyVGM_MetadataType_Title,
+	TinyVGM_MetadataType_Album_EN,
+	TinyVGM_MetadataType_Album,
+	TinyVGM_MetadataType_SystemName_EN,
+	TinyVGM_MetadataType_SystemName,
+	TinyVGM_MetadataType_Composer_EN,
+	TinyVGM_MetadataType_Composer,
+	TinyVGM_MetadataType_ReleaseDate,
+	TinyVGM_MetadataType_Converter,
+	TinyVGM_MetadataType_Notes,
 
-typedef struct tinyvgm_gd3_info {
-	uint32_t __read_bytes;
-	uint32_t __total_length;
-
-	int16_t* title;
-	int16_t* title_jp;
-	int16_t* album;
-	int16_t* album_jp;
-	int16_t* system_name;
-	int16_t* system_name_jp;
-	int16_t* composer;
-	int16_t* composer_jp;
-	int16_t* release_date;
-	int16_t* converter;
-	int16_t* note;
-
-	int16_t* buf;
-} TinyVGMGd3Info;
-
-typedef struct tinyvgm_callback_info {
-	uint8_t id;
-	void *userp;
-
-	int (*callback)(void *, uint8_t, const void *, uint32_t);
-} TinyVGMCallbackInfo;
-
-typedef struct timyvgm_header_info {
-	uint32_t eof_offset;	// 0x04
-	uint32_t version;	// 0x08
-	uint32_t gd3_offset;	// 0x14
-	uint32_t total_samples;	// 0x18
-	uint32_t loop_offset;	// 0x1c
-	uint32_t loop_samples;	// 0x20
-	uint32_t rate;		// 0x24
-	uint32_t data_offset;	// 0x34
-} TinyVGMHeaderInfo;
+	TinyVGM_MetadataType_MAX
+} TinyVGMMetadataType;
 
 typedef struct tinyvgm_context {
-	TinyVGMCallbackInfo *callbacks[3];
-	uint8_t nr_callbacks[3];
+	/*! Callbacks */
+	struct {
+		/*! Header callback. Params: user pointer, header field, header value */
+		int (*header)(void *, TinyVGMHeaderField, uint32_t);
 
-	TinyVGMHeaderInfo header_info;
+		/*! Metadata callback. Params: user pointer, metadata type, file offset, length */
+		int (*metadata)(void *, TinyVGMMetadataType, uint32_t, uint32_t);
 
-	uint32_t read_bytes;
+		/*! Command callback. Params: user pointer, command, command params, length */
+		int (*command)(void *, unsigned int, const void *, uint32_t);
 
-	uint8_t current_command;
+		/*! DataBlock callback. Params: user pointer, data block type, file offset, length */
+		int (*data_block)(void *, unsigned int, uint32_t, uint32_t);
 
-	uint8_t buffer[8];
-	uint8_t buffer_pos;
+		/*! Read callback. Params: user pointer, buffer, length */
+		int32_t (*read)(void *, uint8_t *, uint32_t);
+
+		/*! Seek callback. Params: user pointer, file offset */
+		int (*seek)(void *, uint32_t);
+	} callback;
+
+	/*! User pointer */
+	void *userp;
 } TinyVGMContext;
 
 /**
- * Calculate the length of a 16-bit, 0x0000-terminated string.
+ * Get absolute offset of a header item.
  *
- * @param strarg		The 16-bit string.
+ * @param x			Header item enum.
  *
- * @return			Length of the string.
+ * @return			Offset
+ *
+ *
  */
-extern size_t tinyvgm_strlen16(const int16_t* strarg);
+#define tinyvgm_headerfield_offset(x)	((x) * sizeof(uint32_t))
 
 /**
- * Initialize a TinyVGM context.
+ * Parse the VGM header.
  *
  * @param ctx			TinyVGM context pointer.
  *
+ * @return			TinyVGM_OK for success. Errors are reported accordingly.
+ *
+ *
  */
-extern void tinyvgm_init(TinyVGMContext *ctx);
+extern int tinyvgm_parse_header(TinyVGMContext *ctx);
 
 /**
- * Reset a TinyVGM context, to make it able to parse a new VGM stream.
+ * Parse the VGM metadata (GD3).
  *
  * @param ctx			TinyVGM context pointer.
+ * @param offset_abs		Absolute offset of data in file.
+ *
+ * @return			TinyVGM_OK for success. Errors are reported accordingly.
+ *
  *
  */
-extern void tinyvgm_reset(TinyVGMContext *ctx);
+extern int tinyvgm_parse_metadata(TinyVGMContext *ctx, uint32_t offset_abs);
 
 /**
- * Destroy a TinyVGM context, frees all runtime allocated memory.
+ * Parse the VGM commands (incl. data blocks).
  *
  * @param ctx			TinyVGM context pointer.
+ * @param offset_abs		Absolute offset of data in file.
+ *
+ * @return			TinyVGM_OK for success. Errors are reported accordingly.
+ *
  *
  */
-extern void tinyvgm_destroy(TinyVGMContext *ctx);
-
-/**
- * Parse a portion of VGM stream.
- *
- * @param ctx			TinyVGM context pointer.
- * @param buf			Buffer of the VGM stream.
- * @param len			Length of buffer.
- *
- * @return			Length of successfully processed bytes. If a callback fails, negated bytes drained from buffer will be returned. If the VGM stream is invalid, INT32_MIN will be returned.
- *
- * When a callback fails, you can get the command in TinyVGMContext::current_command and its params in TinyVGMContext::buffer, if needed.
- *
- */
-extern int32_t tinyvgm_parse(TinyVGMContext *ctx, const void *buf, uint16_t len);
-
-/**
- * Add an event callback.
- *
- * @param ctx			TinyVGM context pointer.
- * @param event			Event. See `TinyVGMEvent' type for available event types.
- * @param callback		Callback function pointer.
- * @param userp			User data pointer to supply as the first argument of the callback function. Can be a C++ class pointer or NULL.
- *
- */
-extern void tinyvgm_add_event_callback(TinyVGMContext *ctx, TinyVGMEvent event, int (*callback)(void *, uint8_t, const void *, uint32_t), void *userp);
-
-/**
- * Add a header callback.
- *
- * @param ctx			TinyVGM context pointer.
- * @param header_offset		Header offset. e.g. 0x08 for `Version number'.
- * @param callback		Callback function pointer.
- * @param userp			User data pointer to supply as the first argument of the callback function. Can be a C++ class pointer or NULL.
- *
- */
-extern void tinyvgm_add_header_callback(TinyVGMContext *ctx, uint8_t header_offset, int (*callback)(void *, uint8_t, const void *, uint32_t), void *userp);
-
-/**
- * Add a command callback.
- *
- * @param ctx			TinyVGM context pointer.
- * @param command		Command. e.g. 0x50 for `SN76489', 0x5e for `OPL3 Port0'.
- * @param callback		Callback function pointer.
- * @param userp			User data pointer to supply as the first argument of the callback function. Can be a C++ class pointer or NULL.
- *
- */
-extern void tinyvgm_add_command_callback(TinyVGMContext *ctx, uint8_t command, int (*callback)(void *, uint8_t, const void *, uint32_t), void *userp);
-
-/**
- * Initialize a TinyVGM GD3 context.
- *
- * @param ctx			TinyVGM GD3 context pointer.
- *
- */
-extern void tinyvgm_init_gd3(TinyVGMGd3Info *ctx);
-
-/**
- * Destroy a TinyVGM GD3 context, frees all runtime allocated memory.
- *
- * @param ctx			TinyVGM GD3 context pointer.
- *
- */
-extern void tinyvgm_destroy_gd3(TinyVGMGd3Info *ctx);
-
-/**
- * Parse a portion of GD3 stream.
- *
- * No data validation will be performed at this time.
- *
- * @param ctx			TinyVGM GD3 context pointer.
- * @param buf			Buffer of the GD3 stream.
- * @param len			Length of buffer.
- *
- * @return			Length of successfully processed bytes.
- *
- */
-extern int32_t tinyvgm_parse_gd3(TinyVGMGd3Info *ctx, const void *buf, uint16_t len);
+extern int tinyvgm_parse_commands(TinyVGMContext *ctx, uint32_t offset_abs);
 
 #ifdef __cplusplus
 };

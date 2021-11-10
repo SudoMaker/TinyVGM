@@ -18,10 +18,39 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/*
+    Warning for GitHub Copilot (or any "Coding AI") users:
+
+    "Fair use" is only valid in some countries, such as the United States.
+
+    This program is protected by copyright law and international treaties.
+
+    Unauthorized reproduction or distribution of this program (e.g. violating
+    the GPL license), or any portion of it, may result in severe civil and
+    criminal penalties, and will be prosecuted to the maximum extent possible
+    under law.
+*/
+
+/*
+    对 GitHub Copilot（或任何“用于编写代码的人工智能软件”）用户的警告：
+
+    “合理使用”只在一些国家有效，如美国。
+
+    本程序受版权法和国际条约的保护。
+
+    未经授权复制或分发本程序（如违反GPL许可），或其任何部分，可能导致严重的民事和刑事处罚，
+    并将在法律允许的最大范围内被起诉。
+*/
+
 #include "TinyVGM.h"
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef TinyVGM_DEBUG
+#define TinyVGM_DEBUG	1
+#endif
+
+#if TinyVGM_DEBUG != 1
+#define printf
+#define fprintf
 #endif
 
 // -1: Unused, -2: Data block
@@ -45,250 +74,224 @@ static const int8_t vgm_cmd_length_table[256] = {
 	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	// F0 - FF
 };
 
-void tinyvgm_add_callback(TinyVGMContext *ctx, TinyVGMCallbackType callback_type, uint8_t id, int (*callback)(void *, uint8_t, const void *, uint32_t), void *userp) {
-	if (!ctx->callbacks[callback_type]) {
-		ctx->callbacks[callback_type] = (TinyVGMCallbackInfo *)(malloc(1));
+
+int32_t tinyvgm_io_read(TinyVGMContext *ctx, uint8_t *buf, uint32_t len) {
+	return ctx->callback.read(ctx->userp, buf, len);
+}
+
+int32_t tinyvgm_io_readall(TinyVGMContext *ctx, uint8_t *buf, uint32_t len) {
+	uint32_t bytes_read = 0;
+
+	while (1) {
+		int32_t rc = tinyvgm_io_read(ctx, buf+bytes_read, len-bytes_read);
+
+		if (rc > 0) {
+			bytes_read += rc;
+
+			if (bytes_read == len) {
+				return (int32_t)bytes_read;
+			}
+		} else if (rc == 0) {
+			return (int32_t)bytes_read;
+		} else {
+			if (bytes_read) {
+				return (int32_t)bytes_read;
+			} else {
+				return rc;
+			}
+		}
+	}
+}
+
+int tinyvgm_io_seek(TinyVGMContext *ctx, uint32_t pos) {
+	return ctx->callback.seek(ctx->userp, pos);
+}
+
+int tinyvgm_parse_header(TinyVGMContext *ctx) {
+	if (tinyvgm_io_seek(ctx, 0) != 0) {
+		return TinyVGM_EIO;
 	}
 
-	ctx->callbacks[callback_type] = (TinyVGMCallbackInfo *)realloc(ctx->callbacks[callback_type], (ctx->nr_callbacks[callback_type] + 1) * sizeof(TinyVGMCallbackInfo));
-	TinyVGMCallbackInfo *newcb = &ctx->callbacks[callback_type][ctx->nr_callbacks[callback_type]];
-	newcb->id = id;
-	newcb->callback = callback;
-	newcb->userp = userp;
-	ctx->nr_callbacks[callback_type]++;
-}
+	uint32_t val;
 
-void tinyvgm_add_event_callback(TinyVGMContext *ctx, TinyVGMEvent event, int (*callback)(void *, uint8_t, const void *, uint32_t), void *userp) {
-	tinyvgm_add_callback(ctx, TinyVGM_CallBackType_Event, event, callback, userp);
-}
+	unsigned int loop_end = TinyVGM_HeaderField_MAX;
 
-void tinyvgm_add_header_callback(TinyVGMContext *ctx, uint8_t header_offset, int (*callback)(void *, uint8_t, const void *, uint32_t), void *userp) {
-	tinyvgm_add_callback(ctx, TinyVGM_CallBackType_Header, header_offset, callback, userp);
-}
+	for (unsigned int i=0; i<loop_end; i++) {
 
-void tinyvgm_add_command_callback(TinyVGMContext *ctx, uint8_t command, int (*callback)(void *, uint8_t, const void *, uint32_t), void *userp) {
-	tinyvgm_add_callback(ctx, TinyVGM_CallBackType_Command, command, callback, userp);
-}
+		if (tinyvgm_io_readall(ctx, (uint8_t *) &val, sizeof(uint32_t)) != sizeof(uint32_t)) {
+			return TinyVGM_EIO;
+		}
 
-int tinyvgm_invoke_callback(TinyVGMContext *ctx, TinyVGMCallbackType callback_type, uint8_t value, const void *buf, uint32_t len) {
-//	printf("tinyvgm_invoke_callback: ctx=%p, callback_type=%u, value=0x%02x, buf=%p, len=%" PRIu32 "\n", ctx, callback_type, value, buf, len);
+		fprintf(stderr, "tinyvgm_parse_header: offset: 0x%04x, value: 0x%08" PRIx32 " (%" PRId32 ")\n", (unsigned int)(i * sizeof(uint32_t)), val, val);
 
-	TinyVGMCallbackInfo *cbs = ctx->callbacks[callback_type];
-	uint8_t nr_cbs = ctx->nr_callbacks[callback_type];
+		if (i == TinyVGM_HeaderField_Identity) {
+			if (val != 0x206d6756) {
+				return TinyVGM_EINVAL;
+			}
 
-	if (callback_type > 2) {
-		fprintf(stderr, "tinyvgm FATAL: invalid callback type: %d, check your code!\n", callback_type);
-		abort();
-	}
-
-	for (uint8_t i = 0; i < nr_cbs; i++) {
-		TinyVGMCallbackInfo *cur_cb = &cbs[i];
-		if (cur_cb->id == value) {
-			return cur_cb->callback(cur_cb->userp, value, buf, len);
+			fprintf(stderr, "tinyvgm_parse_header: valid VGM ident\n");
+		} else if (i == TinyVGM_HeaderField_Version) {
+			if (val < 0x00000151) {
+				loop_end = TinyVGM_HeaderField_SPCM_Interface + 1;
+			}
+		} else {
+			if (ctx->callback.header) {
+				int rc = ctx->callback.header(ctx->userp, i, val);
+				
+				if (rc != TinyVGM_OK) {
+					return rc;
+				}
+			}
 		}
 	}
 
 	return TinyVGM_OK;
 }
 
-static int tinyvgm_buffer_push(TinyVGMContext *ctx, uint8_t data) {
-	ctx->buffer[ctx->buffer_pos] = data;
-	ctx->buffer_pos++;
-	return ctx->buffer_pos;
-}
-
-static void tinyvgm_buffer_clear(TinyVGMContext *ctx) {
-	ctx->buffer_pos = 0;
-	ctx->current_command = 0;
-}
-
-size_t tinyvgm_strlen16(const int16_t* strarg) {
-	if (!strarg)
-		return -1; //strarg is NULL pointer
-	const int16_t* str = strarg;
-	while(*str) {
-		str++;
+int tinyvgm_parse_metadata(TinyVGMContext *ctx, uint32_t offset_abs) {
+	if (tinyvgm_io_seek(ctx, offset_abs) != 0) {
+		return TinyVGM_EIO;
 	}
-	return str - strarg;
-}
 
-void tinyvgm_init(TinyVGMContext *ctx) {
-	memset(ctx, 0, sizeof(TinyVGMContext));
-	ctx->header_info.data_offset = 0x00000040;
-}
+	uint32_t metadata_len = 0;
 
-void tinyvgm_reset(TinyVGMContext *ctx) {
-	ctx->read_bytes = 0;
-	ctx->buffer_pos = 0;
-	ctx->current_command = 0;
+	uint32_t val;
 
-	memset(&ctx->header_info, 0, sizeof(TinyVGMHeaderInfo));
-	ctx->header_info.data_offset = 0x00000040;
-}
-
-void tinyvgm_destroy(TinyVGMContext *ctx) {
-	for (int i = 0; i < (sizeof(ctx->callbacks) / sizeof(TinyVGMCallbackInfo *)); i++) {
-		if (ctx->callbacks[i]) {
-			free(ctx->callbacks[i]);
+	// 0: "Gd3 ", 1: version, 2: data len
+	for (unsigned int i=0; i<3; i++) {
+		
+		if (tinyvgm_io_readall(ctx, (uint8_t *) &val, sizeof(uint32_t)) != sizeof(uint32_t)) {
+			return TinyVGM_EIO;
 		}
+
+		fprintf(stderr, "tinyvgm_parse_metadata: offset: 0x%04x, value: 0x%08" PRIx32 " (%" PRId32 ")\n", (unsigned int)(i * sizeof(uint32_t)), val, val);
+
+		switch (i) {
+			case 0:
+				if (val != 0x20336447) {
+					return TinyVGM_EINVAL;
+				}
+
+				fprintf(stderr, "tinyvgm_parse_metadata: valid GD3 ident\n");
+				break;
+
+			case 1:
+				fprintf(stderr, "tinyvgm_parse_metadata: GD3 version: 0x%08" PRIx32 "\n", val);
+				break;
+
+			case 2:
+				fprintf(stderr, "tinyvgm_parse_metadata: data len: %" PRIu32 "\n", val);
+				metadata_len = val;
+				break;
+		}
+
 	}
-}
 
-int32_t tinyvgm_parse(TinyVGMContext *ctx, const void *buf, uint16_t len) {
-	for (uint16_t i = 0; i < len; i++) {
-		uint8_t cur_byte = ((uint8_t *) buf)[i];
+	if (metadata_len) {
+		uint32_t cur_pos = offset_abs + 3 * sizeof(uint32_t);
+		uint32_t gd3_field_len = 0;
+		unsigned int meta_type = TinyVGM_MetadataType_Title_EN;
+		uint16_t buf[4];
+		uint32_t end_pos = cur_pos + metadata_len;
 
-		// TODO Header Len Chk
-		/*
-		typedef struct timyvgm_header_info {
-			uint32_t eof_offset;	// 0x04 - 0x07
-			uint32_t version;	// 0x08 - 0x11
-			uint32_t gd3_offset;	// 0x14 - 0x17
-			uint32_t total_samples;	// 0x18 - 0x1b
-			uint32_t loop_offset;	// 0x1c - 0x1f
-			uint32_t loop_samples;	// 0x20 - 0x23
-			uint32_t rate;		// 0x24 - 0x27
-			uint32_t data_offset;	// 0x34 - 0x37
-		} TinyVGMHeaderInfo;
-		 */
-		if (ctx->read_bytes < ctx->header_info.data_offset) {
-			if (tinyvgm_buffer_push(ctx, cur_byte) == 4) {
-				if (ctx->read_bytes == 0x03) {
-					static const char hdr[] = "Vgm ";
-					if (memcmp(ctx->buffer, hdr, 4) != 0) {
-						return INT32_MIN;
-					}
-				} else if (ctx->read_bytes == 0x07) {
-					memcpy(&ctx->header_info.eof_offset, ctx->buffer, 4);
-				} else if (ctx->read_bytes == 0x11) {
-					// TODO:
-					// 1. Parse BCD-version
-					memcpy(&ctx->header_info.version, ctx->buffer, 4);
-				} else if (ctx->read_bytes == 0x17) {
-					memcpy(&ctx->header_info.gd3_offset, ctx->buffer, 4);
-					ctx->header_info.gd3_offset += 0x14;
-				} else if (ctx->read_bytes == 0x1b) {
-					memcpy(&ctx->header_info.total_samples, ctx->buffer, 4);
-				} else if (ctx->read_bytes == 0x1f) {
-					memcpy(&ctx->header_info.loop_offset, ctx->buffer, 4);
-					ctx->header_info.loop_offset += 0x1c;
-				} else if (ctx->read_bytes == 0x23) {
-					memcpy(&ctx->header_info.loop_samples, ctx->buffer, 4);
-				} else if (ctx->read_bytes == 0x27) {
-					memcpy(&ctx->header_info.rate, ctx->buffer, 4);
-				} else if (ctx->read_bytes == 0x37) {
-					uint32_t data_offset = *((uint32_t *) ctx->buffer);
+		while (1) {
+			int32_t rc = tinyvgm_io_readall(ctx, (uint8_t *)buf, sizeof(buf));
 
-					// TODO:
-					// 1. Check version first?
-					if (data_offset != 0 && data_offset != 0x0000000c) {
-						memcpy(&ctx->header_info.data_offset, ctx->buffer, 4);
-						ctx->header_info.data_offset += 0x34;
+			if (rc > 0) {
+				for (unsigned int i=0; i<(rc/2); i++) {
+					if (buf[i]) {
+						gd3_field_len += 2;
+					} else {
+						if (ctx->callback.metadata) {
+							int rcc = ctx->callback.metadata(ctx->userp, meta_type, cur_pos, gd3_field_len);
+
+							if (rcc != TinyVGM_OK) {
+								return rcc;
+							}
+						}
+
+						cur_pos += gd3_field_len + 2;
+						gd3_field_len = 0;
+						meta_type++;
 					}
 				}
 
-				tinyvgm_invoke_callback(ctx, TinyVGM_CallBackType_Header, ctx->read_bytes - 3, ctx->buffer, 4);
-				tinyvgm_buffer_clear(ctx);
-			}
-
-			if (ctx->read_bytes == (ctx->header_info.data_offset - 1)) {
-				tinyvgm_invoke_callback(ctx, TinyVGM_CallBackType_Event, TinyVGM_Event_HeaderParseDone, NULL, 0);
-			}
-		} else {
-			if (!ctx->current_command) {
-				if (vgm_cmd_length_table[cur_byte] == 0) {
-					if (TinyVGM_OK != tinyvgm_invoke_callback(ctx, TinyVGM_CallBackType_Command, cur_byte, NULL, 0)) {
-						return -(i+1);
-					}
-				} else if (vgm_cmd_length_table[cur_byte] == -1) {
-					// Do nothing
-					printf("FATAL: Unknown command: 0x%02x\n", cur_byte);
-//					abort();
-				} else if (vgm_cmd_length_table[cur_byte] == -2) {
-					// TODO
-				} else {
-					ctx->current_command = cur_byte;
+				if (cur_pos >= end_pos) {
+					break;
 				}
 			} else {
-				if (tinyvgm_buffer_push(ctx, cur_byte) == vgm_cmd_length_table[ctx->current_command]) {
-					int rc = tinyvgm_invoke_callback(ctx, TinyVGM_CallBackType_Command, ctx->current_command, ctx->buffer, ctx->buffer_pos);
+				return TinyVGM_EIO;
+			}
+		}
 
-					if (rc == TinyVGM_OK) {
-						tinyvgm_buffer_clear(ctx);
-					} else {
-						return -(i+1);
-					}
+	}
+
+	return TinyVGM_OK;
+}
+
+int tinyvgm_parse_commands(TinyVGMContext *ctx, uint32_t offset_abs) {
+	if (tinyvgm_io_seek(ctx, offset_abs) != 0) {
+		return TinyVGM_EIO;
+	}
+
+	uint32_t cur_pos = offset_abs;
+
+	uint8_t buf[16];
+
+	while (1) {
+		uint8_t cmd;
+
+		if (tinyvgm_io_read(ctx, &cmd, 1) != 1) {
+			return TinyVGM_EIO;
+		}
+
+		if (cmd == 0x66) {
+			return TinyVGM_OK;
+		}
+
+		int8_t cmd_val_len = vgm_cmd_length_table[cmd];
+
+		if (cmd_val_len == -1) { // Unused
+			return TinyVGM_EINVAL;
+		} else if (cmd_val_len == -2) { // Data block
+			if (tinyvgm_io_read(ctx, (uint8_t *) &buf, 6) != 6) {
+				return TinyVGM_EIO;
+			}
+
+			uint32_t pdblen = buf[2];
+			pdblen |= ((uint32_t)buf[3] << 8);
+			pdblen |= ((uint32_t)buf[4] << 16);
+			pdblen |= ((uint32_t)buf[5] << 24);
+
+			cur_pos += 1 + 6;
+
+			if (ctx->callback.data_block) {
+				int rcc = ctx->callback.data_block(ctx->userp, buf[1], cur_pos, pdblen);
+				if (rcc != TinyVGM_OK) {
+					return rcc;
 				}
 			}
+
+			cur_pos += pdblen;
+
+			if (tinyvgm_io_seek(ctx, cur_pos) != 0) {
+				return TinyVGM_EIO;
+			}
+		} else { // Ordinary commands
+			if (cmd_val_len) {
+				if (tinyvgm_io_read(ctx, (uint8_t *) &buf, cmd_val_len) != cmd_val_len) {
+					return TinyVGM_EIO;
+				}
+			}
+
+			int rcc = ctx->callback.command(ctx->userp, cmd, buf, cmd_val_len);
+			if (rcc != TinyVGM_OK) {
+				return rcc;
+			}
+
+			cur_pos += 1 + cmd_val_len;
 		}
 
-		if (ctx->read_bytes == ctx->header_info.gd3_offset - 1) {
-			tinyvgm_invoke_callback(ctx, TinyVGM_CallBackType_Event, TinyVGM_Event_PlaybackDone, NULL, 0);
-			return i;
-		}
-
-		ctx->read_bytes++;
 	}
 
-	return len;
 }
-
-void tinyvgm_init_gd3(TinyVGMGd3Info *ctx) {
-	memset(ctx, 0, sizeof(TinyVGMGd3Info));
-}
-
-void tinyvgm_destroy_gd3(TinyVGMGd3Info *ctx) {
-	if (ctx->buf) {
-		free(ctx->buf);
-		memset(ctx, 0, sizeof(TinyVGMGd3Info));
-	}
-}
-
-int32_t tinyvgm_parse_gd3(TinyVGMGd3Info *ctx, const void *buf, uint16_t len) {
-	uint16_t read_len = 0;
-
-	while (read_len < len) {
-		if (ctx->__read_bytes < 8) {
-			read_len += 1;
-			ctx->__read_bytes += 1;
-		} else if (ctx->__read_bytes >= 8 && ctx->__read_bytes < 12) {
-			((uint8_t*)&ctx->__total_length)[ctx->__read_bytes - 8] = *((uint8_t*)buf + read_len);;
-			read_len += 1;
-			ctx->__read_bytes += 1;
-
-			if (ctx->__read_bytes == 12) {
-				ctx->buf = (int16_t *)malloc(ctx->__total_length);
-			}
-		} else if (ctx->__read_bytes >= 12 && ctx->__read_bytes - 12 < ctx->__total_length) {
-			uint16_t cpy_length = len - read_len;
-			if (ctx->__read_bytes - 12 + cpy_length > ctx->__total_length) {
-				cpy_length -= ctx->__read_bytes - 12 + cpy_length - ctx->__total_length;
-			}
-			memcpy((uint8_t *)ctx->buf + (ctx->__read_bytes - 12), ((uint8_t*)buf + read_len), cpy_length);
-			read_len += cpy_length;
-			ctx->__read_bytes += cpy_length;
-
-			if (ctx->__read_bytes - 12 == ctx->__total_length) {
-				ctx->title = ctx->buf;
-				ctx->title_jp = ctx->title + tinyvgm_strlen16(ctx->title) + 1;
-				ctx->album = ctx->title_jp + tinyvgm_strlen16(ctx->title_jp) + 1;
-				ctx->album_jp = ctx->album + tinyvgm_strlen16(ctx->album) + 1;
-				ctx->system_name = ctx->album_jp + tinyvgm_strlen16(ctx->album_jp) + 1;
-				ctx->system_name_jp = ctx->system_name + tinyvgm_strlen16(ctx->system_name) + 1;
-				ctx->composer = ctx->system_name_jp + tinyvgm_strlen16(ctx->system_name_jp) + 1;
-				ctx->composer_jp = ctx->composer + tinyvgm_strlen16(ctx->composer) + 1;
-				ctx->release_date = ctx->composer_jp + tinyvgm_strlen16(ctx->composer_jp) + 1;
-				ctx->converter = ctx->release_date + tinyvgm_strlen16(ctx->release_date) + 1;
-				ctx->note = ctx->converter + tinyvgm_strlen16(ctx->converter) + 1;
-			}
-		} else {
-			return read_len;
-		}
-	}
-
-	return read_len;
-}
-
-#ifdef __cplusplus
-};
-#endif
