@@ -3,6 +3,7 @@
 A lightweight library for parsing the VGM format.
 
 ## Features
+- Very tiny: less than 300 lines of code
 - Standard C99 with no platform-specific dependency
 - Supports all VGM features: metadata (GD3), data block, etc.
 - Robust architecture using callbacks
@@ -18,14 +19,16 @@ All callbacks (except I/O ones) should return `TinyVGM_OK` to let the parsing co
 
 The `read` callback should return the number of bytes actually read. 0 for EOF, and negative values for error.
 
-The `seek` callback should 0 for success, and negative values for error.
+The `seek` callback should return 0 for success, and negative values for error.
 
-See `test.c` for a complete example.
+See `example.c` for a complete example.
 
 ## Licensing
 This project uses the AGPLv3 license.
 
-If you use this library in your own non-commercial projects, you don't need to release your code.
+If you use this library in your own non-commercial projects, usually you don't need to release your code. See [this FAQ](https://www.gnu.org/licenses/gpl-faq.html#GPLRequireSourcePostedPublic).
+
+If you see a possible license violation, don't hesitate to tell us.
 
 #### Warning for GitHub Copilot (or any "Coding AI") users
 
@@ -34,5 +37,4 @@ If you use this library in your own non-commercial projects, you don't need to r
 This program is protected by copyright law and international treaties.
 
 Unauthorized reproduction or distribution of this program (**e.g. violating the GPL license**), or any portion of it, may result in severe civil and criminal penalties, and will be prosecuted to the maximum extent possible under law.
-
 

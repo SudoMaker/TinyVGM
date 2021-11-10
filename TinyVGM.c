@@ -45,7 +45,7 @@
 #include "TinyVGM.h"
 
 #ifndef TinyVGM_DEBUG
-#define TinyVGM_DEBUG	1
+#define TinyVGM_DEBUG	0
 #endif
 
 #if TinyVGM_DEBUG != 1
