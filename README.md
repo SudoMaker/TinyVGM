@@ -13,7 +13,7 @@ A lightweight library for parsing the VGM format.
 ## Usage
 The `TinyVGM.h` file is well documented using Doxygen format.
 
-Start by creating a `TinyVGMContext`. Fill the callbacks and user pointer. The `command` callback is mandatory. Unused callbacks should be filled by NULLs. Then you can use the `tinyvgm_parse_*` functions.
+Start by creating a `TinyVGMContext`. Fill the callbacks and user pointer. The `command`, `read` and `seek` callbacks is mandatory. Unused callbacks should be filled by NULLs. Then you can use the `tinyvgm_parse_*` functions.
 
 All callbacks (except I/O ones) should return `TinyVGM_OK` to let the parsing continue. Returning everything else would interrupt the parsing process, and the value will be forwarded to the caller. This can be used to implement pausing and looping.
 

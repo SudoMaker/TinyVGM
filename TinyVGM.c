@@ -2,7 +2,6 @@
     This file is part of TinyVGM.
 
     Copyright (C) 2021 ReimuNotMoe <reimu@sudomaker.com>
-    Copyright (C) 2021 Yukino Song <yukino@sudomaker.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -74,12 +73,11 @@ static const int8_t vgm_cmd_length_table[256] = {
 	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	// F0 - FF
 };
 
-
-int32_t tinyvgm_io_read(TinyVGMContext *ctx, uint8_t *buf, uint32_t len) {
+static inline int32_t tinyvgm_io_read(TinyVGMContext *ctx, uint8_t *buf, uint32_t len) {
 	return ctx->callback.read(ctx->userp, buf, len);
 }
 
-int32_t tinyvgm_io_readall(TinyVGMContext *ctx, uint8_t *buf, uint32_t len) {
+static int32_t tinyvgm_io_readall(TinyVGMContext *ctx, uint8_t *buf, uint32_t len) {
 	uint32_t bytes_read = 0;
 
 	while (1) {
@@ -103,7 +101,7 @@ int32_t tinyvgm_io_readall(TinyVGMContext *ctx, uint8_t *buf, uint32_t len) {
 	}
 }
 
-int tinyvgm_io_seek(TinyVGMContext *ctx, uint32_t pos) {
+static inline int tinyvgm_io_seek(TinyVGMContext *ctx, uint32_t pos) {
 	return ctx->callback.seek(ctx->userp, pos);
 }
 

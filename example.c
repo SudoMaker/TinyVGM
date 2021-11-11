@@ -2,7 +2,6 @@
     This file is part of TinyVGM.
 
     Copyright (C) 2021 ReimuNotMoe <reimu@sudomaker.com>
-    Copyright (C) 2021 Yukino Song <yukino@sudomaker.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -46,8 +45,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-
-//const time_t sample_rate = 1000000 / 44100;
 
 int callback_command(void *userp, unsigned int cmd, const void *buf, uint32_t len) {
 	printf("Command: cmd=0x%02x, len=%" PRIu32 ", data:", cmd, len);
@@ -146,7 +143,6 @@ int main(int argc, char **argv) {
 	FILE *file = fopen(argv[1], "rb");
 	assert(file);
 
-
 	TinyVGMContext tvc = {
 		.callback = {
 			.header = callback_header,
@@ -161,9 +157,7 @@ int main(int argc, char **argv) {
 		.userp = file
 	};
 
-	int rc;
-
-	rc = tinyvgm_parse_header(&tvc);
+	int rc = tinyvgm_parse_header(&tvc);
 
 	printf("tinyvgm_parse_header returned %d\n", rc);
 
