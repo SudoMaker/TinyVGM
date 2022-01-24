@@ -64,6 +64,12 @@ uint32_t gd3_offset_abs = 0, data_offset_abs = 0;
 int callback_header(void *userp, TinyVGMHeaderField field, uint32_t value) {
 
 	switch (field) {
+		case TinyVGM_HeaderField_Version:
+			if (value < 0x00000150) {
+				data_offset_abs = 0x40;
+				printf("Pre-1.50 version detected, Data Offset is 0x40\n");
+			}
+			break;
 		case TinyVGM_HeaderField_GD3_Offset:
 			gd3_offset_abs = value + tinyvgm_headerfield_offset(field);
 			printf("GD3 ABS Offset: 0x%08" PRIx32 " (%" PRIu32 ")\n", gd3_offset_abs, gd3_offset_abs);

@@ -44,7 +44,7 @@
 #include "TinyVGM.h"
 
 #ifndef TinyVGM_DEBUG
-#define TinyVGM_DEBUG	0
+#define TinyVGM_DEBUG	1
 #endif
 
 #if TinyVGM_DEBUG != 1
@@ -130,7 +130,24 @@ int tinyvgm_parse_header(TinyVGMContext *ctx) {
 			fprintf(stderr, "tinyvgm_parse_header: valid VGM ident\n");
 		} else if (i == TinyVGM_HeaderField_Version) {
 			if (val < 0x00000151) {
-				loop_end = TinyVGM_HeaderField_SPCM_Interface + 1;
+				loop_end = TinyVGM_HeaderField_SegaPCM_Clock;
+				if (val < 0x00000150) {
+					loop_end = TinyVGM_HeaderField_Data_Offset;
+					if (val < 0x00000110) {
+						loop_end = TinyVGM_HeaderField_YM2612_Clock;
+						if (val < 0x00000101) {
+							loop_end = TinyVGM_HeaderField_Rate;
+						}
+					}
+				}
+			}
+
+			if (ctx->callback.header) {
+				int rc = ctx->callback.header(ctx->userp, i, val);
+
+				if (rc != TinyVGM_OK) {
+					return rc;
+				}
 			}
 		} else {
 			if (ctx->callback.header) {
@@ -250,6 +267,7 @@ int tinyvgm_parse_commands(TinyVGMContext *ctx, uint32_t offset_abs) {
 		int8_t cmd_val_len = vgm_cmd_length_table[cmd];
 
 		if (cmd_val_len == -1) { // Unused
+			fprintf(stderr, "tinyvgm_parse_commands: Unknown command 0x%x\n", cmd);
 			return TinyVGM_EINVAL;
 		} else if (cmd_val_len == -2) { // Data block
 			if (tinyvgm_io_read(ctx, (uint8_t *) &buf, 6) != 6) {
