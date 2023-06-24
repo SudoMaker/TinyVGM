@@ -110,15 +110,17 @@ int tinyvgm_parse_header(TinyVGMContext *ctx) {
 		return TinyVGM_EIO;
 	}
 
+	uint8_t buf[4];
 	uint32_t val;
 
 	unsigned int loop_end = TinyVGM_HeaderField_MAX;
 
 	for (unsigned int i=0; i<loop_end; i++) {
 
-		if (tinyvgm_io_readall(ctx, (uint8_t *) &val, sizeof(uint32_t)) != sizeof(uint32_t)) {
+		if (tinyvgm_io_readall(ctx, buf, sizeof(uint32_t)) != sizeof(uint32_t)) {
 			return TinyVGM_EIO;
 		}
+		val=(uint_fast32_t)buf[0] | ((uint_fast32_t)buf[1] << 8) | ((uint_fast32_t)buf[2] << 16) | ((uint_fast32_t)buf[3] << 24);
 
 		fprintf(stderr, "tinyvgm_parse_header: offset: 0x%04x, value: 0x%08" PRIx32 " (%" PRId32 ")\n", (unsigned int)(i * sizeof(uint32_t)), val, val);
 
@@ -170,14 +172,16 @@ int tinyvgm_parse_metadata(TinyVGMContext *ctx, uint32_t offset_abs) {
 
 	uint32_t metadata_len = 0;
 
+	uint8_t buf[8]; /* MAX(sizeof(uint32_t), 4 * sizeof(uint16_t)) */
 	uint32_t val;
 
 	// 0: "Gd3 ", 1: version, 2: data len
 	for (unsigned int i=0; i<3; i++) {
 		
-		if (tinyvgm_io_readall(ctx, (uint8_t *) &val, sizeof(uint32_t)) != sizeof(uint32_t)) {
+		if (tinyvgm_io_readall(ctx, buf, sizeof(uint32_t)) != sizeof(uint32_t)) {
 			return TinyVGM_EIO;
 		}
+		val=(uint_fast32_t)buf[0] | ((uint_fast32_t)buf[1] << 8) | ((uint_fast32_t)buf[2] << 16) | ((uint_fast32_t)buf[3] << 24);
 
 		fprintf(stderr, "tinyvgm_parse_metadata: offset: 0x%04x, value: 0x%08" PRIx32 " (%" PRId32 ")\n", (unsigned int)(i * sizeof(uint32_t)), val, val);
 
@@ -206,11 +210,15 @@ int tinyvgm_parse_metadata(TinyVGMContext *ctx, uint32_t offset_abs) {
 		uint32_t cur_pos = offset_abs + 3 * sizeof(uint32_t);
 		uint32_t gd3_field_len = 0;
 		unsigned int meta_type = TinyVGM_MetadataType_Title_EN;
-		uint16_t buf[4];
+		uint16_t data[4];
 		uint32_t end_pos = cur_pos + metadata_len;
 
 		while (1) {
-			int32_t rc = tinyvgm_io_readall(ctx, (uint8_t *)buf, sizeof(buf));
+			int32_t rc = tinyvgm_io_readall(ctx, buf, sizeof(data));
+			data[0]=(uint_fast32_t)buf[0] | ((uint_fast32_t)buf[1] << 8);
+			data[1]=(uint_fast32_t)buf[2] | ((uint_fast32_t)buf[3] << 8);
+			data[2]=(uint_fast32_t)buf[4] | ((uint_fast32_t)buf[5] << 8);
+			data[3]=(uint_fast32_t)buf[6] | ((uint_fast32_t)buf[7] << 8);
 
 			if (rc > 0) {
 				for (unsigned int i=0; i<(rc/2); i++) {
@@ -270,7 +278,7 @@ int tinyvgm_parse_commands(TinyVGMContext *ctx, uint32_t offset_abs) {
 			fprintf(stderr, "tinyvgm_parse_commands: Unknown command 0x%x\n", cmd);
 			return TinyVGM_EINVAL;
 		} else if (cmd_val_len == -2) { // Data block
-			if (tinyvgm_io_read(ctx, (uint8_t *) &buf, 6) != 6) {
+			if (tinyvgm_io_read(ctx, buf, 6) != 6) {
 				return TinyVGM_EIO;
 			}
 
@@ -295,7 +303,7 @@ int tinyvgm_parse_commands(TinyVGMContext *ctx, uint32_t offset_abs) {
 			}
 		} else { // Ordinary commands
 			if (cmd_val_len) {
-				if (tinyvgm_io_read(ctx, (uint8_t *) &buf, cmd_val_len) != cmd_val_len) {
+				if (tinyvgm_io_read(ctx, buf, cmd_val_len) != cmd_val_len) {
 					return TinyVGM_EIO;
 				}
 			}
