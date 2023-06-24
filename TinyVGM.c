@@ -222,7 +222,7 @@ int tinyvgm_parse_metadata(TinyVGMContext *ctx, uint32_t offset_abs) {
 
 			if (rc > 0) {
 				for (unsigned int i=0; i<(rc/2); i++) {
-					if (buf[i]) {
+					if (data[i]) {
 						gd3_field_len += 2;
 					} else {
 						if (ctx->callback.metadata) {
