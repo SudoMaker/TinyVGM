@@ -270,7 +270,7 @@ int tinyvgm_parse_commands(TinyVGMContext *ctx, uint32_t offset_abs) {
 			fprintf(stderr, "tinyvgm_parse_commands: Unknown command 0x%x\n", cmd);
 			return TinyVGM_EINVAL;
 		} else if (cmd_val_len == -2) { // Data block
-			if (tinyvgm_io_read(ctx, (uint8_t *) &buf, 6) != 6) {
+			if (tinyvgm_io_read(ctx, buf, 6) != 6) {
 				return TinyVGM_EIO;
 			}
 
@@ -295,7 +295,7 @@ int tinyvgm_parse_commands(TinyVGMContext *ctx, uint32_t offset_abs) {
 			}
 		} else { // Ordinary commands
 			if (cmd_val_len) {
-				if (tinyvgm_io_read(ctx, (uint8_t *) &buf, cmd_val_len) != cmd_val_len) {
+				if (tinyvgm_io_read(ctx, buf, cmd_val_len) != cmd_val_len) {
 					return TinyVGM_EIO;
 				}
 			}
